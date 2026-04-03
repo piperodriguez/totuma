@@ -15,6 +15,10 @@ export default {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
         },
+        colors: {
+            'totuma-green': '#4CAF50', // Este es un verde similar al de la hoja
+            'totuma-dark': '#1B5E20',
+        },
     },
 
     plugins: [forms],

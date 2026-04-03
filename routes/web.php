@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Gate;
 
 Route::get('/', function () {
     return view('welcome');
@@ -16,5 +17,14 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+Route::post('/admin/upload-loggro', [LoggroController::class, 'upload'])
+    ->middleware(['auth'])
+    ->can('admin-access') // Solo permite si el Gate 'admin-access' es true
+    ->name('loggro.upload');
+
+Route::get('/admin', function () {
+    return view('admin.index');
+})->middleware(['auth', 'can:admin-access'])->name('admin.index');
 
 require __DIR__.'/auth.php';

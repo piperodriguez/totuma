@@ -34,12 +34,23 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'identificacion' => ['required', 'string', 'max:20', 'unique:'.User::class],
+            'telefono' => ['nullable', 'string', 'max:20']
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'identificacion' => $request->identificacion,
+            'telefono' => $request->telefono,
+            'puntos' => 50 // Requisito: 50 puntos automáticos
+        ]);
+
+        $user->movimientos()->create([
+            'cantidad' => 50,
+            'tipo' => 'acumulacion',
+            'descripcion' => 'Bono de bienvenida',
         ]);
 
         event(new Registered($user));

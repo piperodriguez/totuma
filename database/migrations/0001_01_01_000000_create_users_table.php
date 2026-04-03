@@ -13,9 +13,12 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->string('identificacion')->unique(); // Cédula o NIT para cruzar con Loggro
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
+            $table->string('telefono')->nullable(); // Celular para contacto
+            $table->integer('puntos')->default(0); // Saldo actual de puntos
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();

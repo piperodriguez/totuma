@@ -15,6 +15,11 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    @can('admin-access')
+                    <x-nav-link :href="route('admin.index')" :active="request()->routeIs('dashboard')">
+                        {{ __('Panel de Administración') }}
+                    </x-nav-link>
+                    @endcan
                 </div>
             </div>
 

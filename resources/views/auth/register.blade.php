@@ -9,6 +9,20 @@
             <x-input-error :messages="$errors->get('name')" class="mt-2" />
         </div>
 
+        <!-- Identificacion -->
+        <div class="mt-4">
+            <x-input-label for="identificacion" :value="__('Identificación')" />
+            <x-text-input id="identificacion" class="block mt-1 w-full" type="text" name="identificacion" :value="old('identificacion')" required />
+            <x-input-error :messages="$errors->get('identificacion')" class="mt-2" />
+        </div>
+
+        <!-- Telefono -->
+        <div class="mt-4">
+            <x-input-label for="telefono" :value="__('Teléfono')" />
+            <x-text-input id="telefono" class="block mt-1 w-full" type="text" name="telefono" :value="old('telefono')" />
+            <x-input-error :messages="$errors->get('telefono')" class="mt-2" />
+        </div>
+
         <!-- Email Address -->
         <div class="mt-4">
             <x-input-label for="email" :value="__('Email')" />
