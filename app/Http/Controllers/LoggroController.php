@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\LoggroImportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Jobs\ProcessLoggroImport;
 
 class LoggroController extends Controller
 {
@@ -21,12 +22,18 @@ class LoggroController extends Controller
             'loggro_file' => ['required', 'file', 'mimes:csv,txt'],
         ]);
 
-        try {
-            $res = $this->importService->import($request->file('loggro_file'));
+        // Guardamos el archivo en el disco local (storage/app/private/imports)
+        $path = $request->file('loggro_file')->store('imports');
 
-            return back()->with('status', "Importación exitosa: {$res['processed']} facturas procesadas. ({$res['skipped']} ignoradas, {$res['duplicates']} duplicadas)");
-        } catch (\Exception $e) {
-            return back()->withErrors(['loggro_file' => 'Error al procesar el archivo: ' . $e->getMessage()]);
-        }
+        // Creamos el registro del log
+        $importLog = \App\Models\ImportLog::create([
+            'filename' => $request->file('loggro_file')->getClientOriginalName(),
+            'status' => 'pending'
+        ]);
+
+        // Despachamos el Job pasándole la ruta del archivo
+        ProcessLoggroImport::dispatch($path, $importLog->id);
+
+        return back()->with('status', 'El archivo se está procesando en segundo plano. Te notificaremos al terminar.');
     }
 }

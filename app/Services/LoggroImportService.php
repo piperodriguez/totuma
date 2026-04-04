@@ -9,17 +9,21 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use League\Csv\Reader;
 
 class LoggroImportService
 {
-    public function import(UploadedFile $file): array
+    public function import(string $filePath): array
     {
-        $csv = Reader::createFromPath($file->getRealPath(), 'r');
+        $csv = Reader::createFromPath(Storage::path($filePath), 'r');
         $csv->setHeaderOffset(0);
 
         // Ajustamos el delimitador a coma según tu archivo real
         $csv->setDelimiter(',');
+
+        // Validamos la integridad de los encabezados antes de procesar
+        $this->validateHeaders($csv->getHeader());
 
         $stats = ['processed' => 0, 'skipped' => 0, 'duplicates' => 0];
 
@@ -90,5 +94,19 @@ class LoggroImportService
         });
 
         return $stats;
+    }
+
+    /**
+     * Valida que el archivo CSV contenga las columnas obligatorias para el negocio.
+     */
+    private function validateHeaders(array $headers): void
+    {
+        $required = ['Documento', 'Factura No.', 'Cliente', 'Total', 'Teléfono'];
+        $trimmedHeaders = array_map('trim', $headers);
+        $missing = array_diff($required, $trimmedHeaders);
+
+        if (!empty($missing)) {
+            throw new \Exception("El archivo no contiene las columnas requeridas: " . implode(', ', $missing));
+        }
     }
 }
