@@ -8,96 +8,81 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Cargar Reporte de Loggro</h3>
+            <!-- Contenedor de la Gráfica -->
+            <div class="p-6 bg-white border-b border-gray-200 shadow-sm sm:rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">
+                        Rendimiento de Importaciones (Facturas con Puntos)
+                    </h3>
+                </div>
+                @include('admin.upload-form') {{-- Asumiendo que moviste el form a un partial --}}
+                <br><br>
+                <div class="relative w-full" style="height: 300px;">
+                    <canvas id="importPerformanceChart"></canvas>
 
-                @if (session('status'))
-                    <div class="mb-4 p-4 bg-green-100 border-l-4 border-green-500 text-green-700">
-                        {{ session('status') }}
-                    </div>
-                @endif
-
-                @if ($errors->any())
-                    <div class="mb-4 p-4 bg-red-100 border-l-4 border-red-500 text-red-700">
-                        <ul class="list-disc list-inside">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                <form action="{{ route('loggro.upload') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
-                    @csrf
-                    <div class="flex flex-col sm:flex-row items-center gap-4">
-                        <input type="file" name="loggro_file" required
-                            class="block w-full text-sm text-gray-500
-                            file:mr-4 file:py-2 file:px-4
-                            file:rounded-full file:border-0
-                            file:text-sm file:font-semibold
-                            file:bg-green-600 file:text-white
-                            hover:file:bg-green-700 cursor-pointer">
-
-                        <x-primary-button class="w-full sm:w-auto justify-center">
-                            {{ __('Procesar Puntos') }}
-                        </x-primary-button>
-                    </div>
-                </form>
+                </div>
             </div>
 
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Historial de Importaciones</h3>
+            <!-- Formulario de Carga y Tabla de Historial -->
+            <div class="p-6 bg-white shadow-sm sm:rounded-lg">
 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archivo</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Éxito / Ignorados / Duplicados</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            @forelse(\App\Models\ImportLog::latest()->take(10)->get() as $log)
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {{ $log->filename }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                                            @if($log->status === 'completed') bg-green-100 text-green-800
-                                            @elseif($log->status === 'failed') bg-red-100 text-red-800
-                                            @else bg-yellow-100 text-yellow-800 @endif">
-                                            {{ strtoupper($log->status) }}
-                                        </span>
-                                        @if($log->status === 'failed')
-                                            <p class="text-[10px] text-red-600 mt-1 max-w-xs truncate" title="{{ $log->error_message }}">
-                                                {{ $log->error_message }}
-                                            </p>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-center">
-                                        <span class="text-green-600 font-bold">{{ $log->processed_count }}</span> /
-                                        <span class="text-gray-400">{{ $log->skipped_count }}</span> /
-                                        <span class="text-orange-600">{{ $log->duplicates_count }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ $log->created_at->diffForHumans() }}
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 italic">
-                                        No se han realizado importaciones todavía.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                <div class="mt-8">
+                    <h3 class="text-md font-semibold mb-4 text-gray-700 uppercase tracking-wider">Historial Reciente</h3>
+                    @include('admin.history-table', ['items' => $history])
                 </div>
             </div>
 
         </div>
     </div>
+
+    @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Usamos window.onload para asegurar que el CDN de Chart.js cargó al 100%
+        window.onload = function() {
+            console.log("Iniciando carga de gráfica...");
+
+            const labels = {!! json_encode($chartLabels) !!};
+            const values = {!! json_encode($chartValues) !!};
+
+            // Debug en consola
+            console.log("Datos recibidos:", { labels, values });
+
+            const canvas = document.getElementById('importPerformanceChart');
+            if (!canvas) {
+                alert("Error: No se encontró el canvas con ID importPerformanceChart");
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Facturas Procesadas',
+                        data: values,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        };
+    </script>
+    @endpush
 </x-app-layout>

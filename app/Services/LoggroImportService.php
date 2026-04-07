@@ -18,14 +18,17 @@ class LoggroImportService
     {
         $csv = Reader::createFromPath(Storage::path($filePath), 'r');
         $csv->setHeaderOffset(0);
-
-        // Ajustamos el delimitador a coma según tu archivo real
         $csv->setDelimiter(',');
 
-        // Validamos la integridad de los encabezados antes de procesar
         $this->validateHeaders($csv->getHeader());
 
-        $stats = ['processed' => 0, 'skipped' => 0, 'duplicates' => 0];
+        // Añadimos 'points' al array de estadísticas
+        $stats = [
+            'processed' => 0,
+            'skipped' => 0,
+            'duplicates' => 0,
+            'points' => 0 // <--- Nueva métrica para el total de puntos del cargue
+        ];
 
         DB::transaction(function () use ($csv, &$stats) {
             foreach ($csv as $record) {
@@ -34,28 +37,22 @@ class LoggroImportService
                 $cliente = trim($record['Cliente'] ?? 'Desconocido');
                 $totalRaw = $record['Total'] ?? '0';
 
-                // 1. Log de Salto: Consumidor Final
                 if ($documento === '222222222222') {
-                    Log::info("Fila omitida: Consumidor Final. Cliente: {$cliente} (Factura #{$facturaNo})");
                     $stats['skipped']++;
                     continue;
                 }
 
-                // 2. Log de Duplicado: Factura ya procesada
                 $existe = PuntosMovimiento::where('referencia_loggro', $facturaNo)->exists();
                 if ($existe) {
-                    Log::notice("Factura duplicada omitida: #{$facturaNo}. Cliente: {$cliente}");
                     $stats['duplicates']++;
                     continue;
                 }
 
-                // 3. Limpieza y Cálculo de Puntos con Log de Error de Formato
                 $cleanTotal = preg_replace('/[^\d,]/', '', $totalRaw);
                 $cleanTotal = str_replace(',', '.', $cleanTotal);
                 $totalValue = (float) $cleanTotal;
 
                 if ($totalValue <= 0) {
-                    Log::error("Error de formato o total en cero. Cliente: {$cliente}, Documento: {$documento}, Valor Recibido: {$totalRaw}");
                     $stats['skipped']++;
                     continue;
                 }
@@ -63,7 +60,6 @@ class LoggroImportService
                 $puntosCalculados = (int) floor($totalValue / 1000);
 
                 if ($puntosCalculados > 0) {
-                    // 4. Upsert de Usuario (Crear o Encontrar)
                     $user = User::firstOrCreate(
                         ['identificacion' => $documento],
                         [
@@ -75,7 +71,11 @@ class LoggroImportService
                         ]
                     );
 
-                    $user->increment('puntos', $puntosCalculados);
+                    // Actualizamos el acumulado total Y el valor del último cargue específico
+                    $user->update([
+                        'puntos' => $user->puntos + $puntosCalculados,
+                        'ultimo_cargue_puntos' => $puntosCalculados // <--- Seteamos el valor actual
+                    ]);
 
                     $user->movimientos()->create([
                         'cantidad' => $puntosCalculados,
@@ -84,10 +84,14 @@ class LoggroImportService
                         'referencia_loggro' => $facturaNo,
                     ]);
 
-                    Log::info("Importación exitosa: {$puntosCalculados} puntos para {$cliente} (Factura #{$facturaNo})");
+                    // ACTUALIZACIÓN CLAVE: Acumulamos los puntos en las estadísticas
                     $stats['processed']++;
+                    $stats['points'] += $puntosCalculados; // <--- Suma los puntos de esta factura al total
+
+
+
+                    Log::info("Importación exitosa: {$puntosCalculados} puntos para {$cliente} (Factura #{$facturaNo})");
                 } else {
-                    Log::warning("Puntos insuficientes para procesar. Cliente: {$cliente}, Total: {$totalRaw}");
                     $stats['skipped']++;
                 }
             }

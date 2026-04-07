@@ -12,6 +12,8 @@ class ImportLog extends Model
         'processed_count',
         'skipped_count',
         'duplicates_count',
-        'error_message'
+        'error_message',
+        'total_points_count',
     ];
+
 }

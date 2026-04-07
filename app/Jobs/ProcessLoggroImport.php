@@ -47,6 +47,7 @@ class ProcessLoggroImport implements ShouldQueue
                 'processed_count' => $stats['processed'],
                 'skipped_count' => $stats['skipped'],
                 'duplicates_count' => $stats['duplicates'],
+                'total_points_count' => $stats['points']
             ]);
 
             Log::info("Job: Importación finalizada con éxito.", $stats);

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'identificacion','telefono','puntos'])]
+#[Fillable(['name', 'email', 'password', 'identificacion','telefono','puntos', 'avatar', 'ultimo_cargue_puntos'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -34,4 +34,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(PuntosMovimiento::class);
     }
+
+    public function getProfilePhotoUrlAttribute()
+    {
+        return $this->avatar
+            ? $this->avatar
+            : 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&color=7F9CF5&background=EBF4FF';
+    }
+
 }
